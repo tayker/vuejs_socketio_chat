@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Open+Sans:400,700,800');
+        *{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body{
+            font-family: 'Open Sans', sans-serif;
+        }
+        .main-form {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .main-form input {
+            width: 100%;
+            padding: 10px 15px;
+            font-size: 20px;
+            border: 2px solid #6a737b;
+        }
+        .chat__header{
+            padding: 15px;
+            max-height: calc(100vh - 70px);
+            overflow-x: auto;
+        }
+        .chat__header .item{
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+        .chat__header .item .nickname{
+            color: #003666;
+            font-weight: bold;
+        }
+        .chat__header .item .message{
+            color: #4d4f53;
+        }
+        .login-popup {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            border: 1px solid black;
+            max-width: 400px;
+            -webkit-transform: translate(-50%, -50%);
+            -ms-transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%);
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            -webkit-box-orient: vertical;
+            -webkit-box-direction: normal;
+            -ms-flex-direction: column;
+            flex-direction: column;
+            padding: 15px;
+            z-index: 999;
+            background-color: #fff;
+        }
+
+        .login-popup input {
+            margin: 10px;
+            border: 1px solid black;
+            padding: 5px 10px;
+            font-size: 18px;
+        }
+        .login-popup .button{
+            cursor: pointer;
+            background-color: #6a737b;
+            border: none;
+            padding: 5px 10px;
+            color: #fff;
+            font-size: 18px;
+            font-weight: bold;
+            align-self: center;
+            font-family: inherit;
+        }
+        .overlay{
+            height: 100vh;
+            width: 100%;
+            background-size: cover;
+            background-image: url(img/main_bg.jpg);
+            background-repeat: no-repeat;
+            background-position: center bottom;
+            position: absolute;
+            top: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chat">
+        <div class="chat">
+            <div class="chat__header">
+                <div class="item" v-for="item in chat">
+                    <span class="nickname">{{item.nickname}}: </span>
+                    <span class="message">{{item.message}}</span>
+                </div>
+            </div>
+            <form class="main-form" @submit.prevent="renderMessage">
+                <input type="text" v-model:value="message" required>
+            </form>
+        </div>
+        <form class="login-popup" v-if="!isLoggin" @submit.prevent="loggin">
+            <input type="text" v-model="userLoggin" required>
+            <button class="button">
+                Login
+            </button>
+        </form>
+        <div class="overlay"
+            v-if="overlay"
+        ></div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.16/dist/vue.js"></script>
+    <script>
+        new Vue({
+            el: '#chat',
+            data: {
+                message: '',
+                nickname: '',
+                chat: [],
+                isLoggin: false,
+                userLoggin: null,
+                overlay: true
+            },
+            methods: {
+                renderMessage: function() {
+
+                    this.chat.push({
+                        message: this.message,
+                        nickname: this.nickname
+                    })
+                    this.message = ''
+                    this.sendChat();
+                },
+                sendChat: function() {
+                    var self = this;
+                    socket.emit('chat', this.chat);
+
+                    socket.on('chat', function(msg) {
+                        self.chat = msg
+                    })
+                },
+                loggin: function() {
+                    localStorage.setItem('nickname', this.userLoggin)
+                    this.isLoggin = true
+                    this.nickname = this.userLoggin
+                    this.overlay = false
+                }
+            },
+            created: function() {
+                var self = this;
+
+                if (localStorage.getItem('nickname') !== null) {
+                    this.isLoggin = true
+                    this.nickname = localStorage.getItem('nickname')
+                    this.overlay = false
+                }
+                socket.emit('listInit')
+                socket.on('listInit', function(msg) {
+                    self.chat = msg
+                })
+            }
+        });
+    </script>
+</body>
+
+</html>
